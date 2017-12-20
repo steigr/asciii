@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
 extern crate asciii;
@@ -11,8 +11,10 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 use rocket::response::NamedFile;
-use rocket::response::content;
+use rocket::response::content::{self, Content};
+use rocket::http::ContentType;
 
+use asciii::actions;
 use asciii::project::Project;
 use asciii::project::export::Complete;
 use asciii::project::export::ExportTarget;
@@ -100,21 +102,63 @@ fn projects_by_year(year: Year, num: usize) -> content::Json<Option<String>> {
     content::Json(exported)
 }
 
-#[get("/<file..>", rank=2)]
+#[get("/<file..>", rank=5)]
 fn static_files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
 }
 
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+
+#[derive(FromForm, Debug)]
+struct Dir {
+    year: Option<i32>,
+    all: Option<bool>,
+}
+
+#[get("/", rank=2)]
+fn cal() -> Result<content::Content<String>, String> {
+    cal_params(Dir{year:None,all:None})
+}
+
+#[get("/", rank=2)]
+fn cal_plain() -> Result<content::Plain<String>, String> {
+    cal_plain_params(Dir{year:None,all:None})
+}
+
+#[get("/?<dir>", rank=1)]
+fn cal_params(dir:Dir) -> Result<content::Content<String>, String> {
+    let storage_dir = match dir {
+        Dir{all: Some(true), year:None} => StorageDir::All,
+        Dir{all: Some(true), year:Some(_)} => return Err("Ambiguous".into()),
+        Dir{all: None, year:Some(year)} => StorageDir::Archive(year),
+        Dir{all: None, year:None} => StorageDir::Working,
+        _ => StorageDir::Working,
+    };
+
+    actions::calendar(storage_dir)
+        .map(|s| Content(ContentType::new("text", "calendar"),s) )
+        .map_err(|_|String::from("error"))
+}
+
+#[get("/?<dir>", rank=1)]
+fn cal_plain_params(dir:Dir) -> Result<content::Plain<String>, String> {
+    let storage_dir = match dir {
+        Dir{all: Some(true), year:None} => StorageDir::All,
+        Dir{all: Some(true), year:Some(_)} => return Err("Ambiguous".into()),
+        Dir{all: None, year:Some(year)} => StorageDir::Archive(year),
+        Dir{all: None, year:None} => StorageDir::Working,
+        _ => StorageDir::Working,
+    };
+
+    actions::calendar(storage_dir)
+        .map(|s| content::Plain(s) )
+        .map_err(|_|String::from("error"))
 }
 
 fn main() {
     asciii::util::setup_log();
     rocket::ignite()
-        //.mount("/", routes![index])
         .mount("/", routes![static_files])
+        .mount("/cal", routes![cal,cal_params])
         .mount("/api", routes![projects_by_year,projects_by_year_all])
         .launch();
 }
