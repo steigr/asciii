@@ -102,10 +102,6 @@ fn projects_by_year(year: Year, num: usize) -> content::Json<String> {
     content::Json(exported)
 }
 
-fn responsible() -> Vec<String> {
-    unimplemented!();
-}
-
 #[get("/<file..>", rank=2)]
 fn static_files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
@@ -121,6 +117,6 @@ fn main() {
     rocket::ignite()
         //.mount("/", routes![index])
         .mount("/", routes![static_files])
-        .mount("/", routes![projects_by_year,projects_by_year_all])
+        .mount("/api", routes![projects_by_year,projects_by_year_all])
         .launch();
 }
