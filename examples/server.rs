@@ -80,13 +80,12 @@ fn projects_by_year_all(year: Year) -> content::Json<String> {
             exported
         })
         .collect::<Vec<Complete>>();
-        
-    content::Json(serde_json::to_string(&exported).unwrap()
-)
+
+    content::Json(serde_json::to_string(&exported).unwrap())
 }
 
 #[get("/projects/year/<year>/<num>")]
-fn projects_by_year(year: Year, num: usize) -> content::Json<String> {
+fn projects_by_year(year: Year, num: usize) -> content::Json<Option<String>> {
     CHANNEL.send(()).unwrap();
     let loader = PROJECTS.lock().unwrap();
     let projects = &*loader.projects;
@@ -97,8 +96,7 @@ fn projects_by_year(year: Year, num: usize) -> content::Json<String> {
             exported
         })
         .map(|p: Complete| serde_json::to_string(&p).unwrap())
-        .nth(num)
-        .unwrap();
+        .nth(num);
     content::Json(exported)
 }
 
