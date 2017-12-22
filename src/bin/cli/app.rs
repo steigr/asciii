@@ -190,11 +190,11 @@ pub fn with_cli<F> (app_handler:F) where F: Fn(App) {
                              .short("p")
                             )
 
-                        //.arg(Arg::with_name("broken")
-                        //     .help(lformat!("List broken projects  without project file").as_ref())
-                        //     .long("broken")
-                        //     .short("b")
-                        //    )
+                        .arg(Arg::with_name("broken")
+                             .help(lformat!("List broken projects  without project file").as_ref())
+                             .long("broken")
+                             .short("b")
+                            )
 
                         .arg(Arg::with_name("computed_fields")
                              .help(lformat!("List all computed data fields that can be used with --details").as_ref())

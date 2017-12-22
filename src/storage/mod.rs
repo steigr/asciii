@@ -198,6 +198,7 @@ use std::fmt;
 use std::ffi::OsStr;
 use std::ops::DerefMut;
 use std::collections::HashMap;
+use linked_hash_map::LinkedHashMap;
 
 use slug;
 fn slugify(string:&str) -> String{ slug::slugify(string) }
@@ -386,7 +387,7 @@ impl<L:Storable> Storage<L> {
 
     /// Takes a template file and stores it in the working directory,
     /// in a new project directory according to it's name.
-    pub fn create_project(&self, project_name:&str, template_name:&str, fill_data:&HashMap<&str, String>) -> StorageResult<L> {
+    pub fn create_project(&self, project_name:&str, template_name:&str, fill_data: &HashMap<&str, String>) -> StorageResult<L> {
         debug!("creating a project\n name: {name}\n template: {tmpl}",
                name = project_name,
                tmpl = template_name
@@ -738,8 +739,9 @@ impl<L:Storable> Storage<L> {
 
     fn open_paths(&self, paths: &[PathBuf]) -> ProjectList<L> {
         let mut projects = paths.par_iter()
-            .filter_map(|path| Self::open_project(path))
+            .filter_map(|path| Self::open_project(path).ok())
             .collect::<Vec<L>>();
+
         if cfg!(feature="git_statuses") {
             if let Some(ref repo) = self.repository {
                 return projects
@@ -783,7 +785,7 @@ impl<L:Storable> Storage<L> {
 
     pub fn open_all_archived_projects(&self) -> StorageResult<ProjectsByYear<L>> {
         debug!("OPENING ALL ARCHIVED PROJECTS");
-        let mut map = HashMap::new();
+        let mut map = LinkedHashMap::new();
         for year in self.list_years()? {
             map.insert(year, self.open_projects(StorageDir::Archive(year))?);
         }
@@ -798,14 +800,12 @@ impl<L:Storable> Storage<L> {
         })
     }
 
-    fn open_project(path: &PathBuf) -> Option<L>{
-        match L::open_folder(path) {
-            Ok(project) => Some(project) ,
-            Err(err) => {
-                warn!("Erroneous Project: {}\n {:#?}", path.display(), err);
-                None
-            }
+    fn open_project(path: &PathBuf) -> StorageResult<L> {
+        let project = L::open_folder(path);
+        if let Err(ref err) = project {
+            warn!("{}", err);
         }
+        project
     }
 
 }

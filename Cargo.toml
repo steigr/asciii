@@ -1,6 +1,6 @@
 [package]
 name = "asciii"
-version = "3.1.5"
+version = "3.1.6"
 authors = ["Hendrik Sollich <hendrik@hoodie.de>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
@@ -43,8 +43,9 @@ custom_derive = "0.1"
 open = "1.2"
 error-chain = "0.11"
 crowbook-intl-runtime = "0.1"
-rustyline = {version = "1.0.0", optional = true }
+linked-hash-map = {version = "0.5", features = ["serde_impl"]}
 rayon = "0.9.0"
+rustyline = {version = "1.0.0", optional = true }
 rocket = {version = "0.3", optional = true }
 rocket_codegen = {version = "0.3", optional = true }
 rocket_contrib = {version = "0.3", optional = true }
