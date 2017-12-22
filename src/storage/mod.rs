@@ -624,7 +624,7 @@ impl<L:Storable> Storage<L> {
     pub fn get_project_dir(&self, name:&str, directory:StorageDir) -> StorageResult<PathBuf> {
         trace!("getting project directoty for {:?} from {:?}", name, directory);
         let slugged_name = slugify(name);
-        if let Ok(path) = match directory{
+        if let Ok(path) = match directory {
             StorageDir::Working => Ok(self.working_dir().join(&slugged_name)),
             StorageDir::Archive(year) => self.get_project_dir_from_archive(name, year),
             _ => bail!(ErrorKind::BadChoice)
