@@ -7,11 +7,13 @@ extern crate serde_json;
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 extern crate linked_hash_map;
+extern crate itertools;
 
 extern crate rocket;
 extern crate rocket_contrib;
 
 use rocket::response::NamedFile;
+use itertools::Itertools;
 
 use asciii::project::Project;
 use asciii::storage::{self, ProjectList, Storage, StorageDir, Storable};
@@ -25,12 +27,14 @@ use std::thread;
 
 pub struct ProjectLoader {
     storage: Storage<Project>,
+    years: Vec<i32>,
     projects_all: ProjectList<Project>,
     projects_map: LinkedHashMap<String, Project>,
 }
 
 impl<'a> ProjectLoader {
     pub fn new() -> Self {
+
         let storage = storage::setup().unwrap();
         let projects_all = storage.open_projects(StorageDir::All).unwrap();
         let projects_map = storage.open_projects(StorageDir::All)
@@ -41,9 +45,14 @@ impl<'a> ProjectLoader {
                               Storable::ident(&p)),
                               p))
             .collect();
+        let years = projects_all.iter()
+                                    .filter_map(|p: &Project| p.year())
+                                    .unique()
+                                    .collect::<Vec<_>>();
 
         Self {
             storage,
+            years,
             projects_all,
             projects_map,
         }
@@ -148,40 +157,42 @@ mod projects {
     use serde_json;
     use rocket::response::content;
 
-    #[get("/projects/year/<year>")]
-    fn by_year_all(year: Year) -> content::Json<String> {
+    #[get("/projects/year")]
+    fn years() -> content::Json<String> {
         ::CHANNEL.send(()).unwrap();
         let loader = ::PROJECTS.lock().unwrap();
-        let projects = &*loader.projects_all;
-        let exported = projects.iter()
-            .filter(|&p| if let Some(y) = Storable::year(p) {y == year } else {false})
-            .map(|p: &Project| {
+        content::Json(serde_json::to_string(&loader.years).unwrap())
+    }
+
+    #[get("/full_projects/year/<year>")]
+    fn full_by_year(year: Year) -> content::Json<String> {
+        ::CHANNEL.send(()).unwrap();
+        let loader = ::PROJECTS.lock().unwrap();
+        let exported = loader.projects_map.iter()
+            .filter(|&(_, p)| if let Some(y) = Storable::year(p) {y == year } else {false})
+            .map(|(ident, p)| {
                 let exported: Complete = p.export();
-                exported
+                (ident.clone(), exported)
             })
-            .collect::<Vec<Complete>>();
+            .collect::<LinkedHashMap<String, Complete>>();
 
         content::Json(serde_json::to_string(&exported).unwrap())
     }
 
-    #[get("/projects/year/<year>/<num>")]
-    fn by_year(year: Year, num: usize) -> content::Json<Option<String>> {
+    #[get("/projects/year/<year>")]
+    fn by_year(year: Year) -> content::Json<String> {
         ::CHANNEL.send(()).unwrap();
         let loader = ::PROJECTS.lock().unwrap();
-        let projects = &*loader.projects_all;
-        let exported = projects.iter()
-            .filter(|&p| if let Some(y) = Storable::year(p) {y == year } else {false})
-            .map(|p: &Project| {
-                let exported: Complete = p.export();
-                exported
-            })
-            .map(|p: Complete| serde_json::to_string(&p).unwrap())
-            .nth(num);
-        content::Json(exported)
+        let exported = loader.projects_map.iter()
+            .filter(|&(_, p)| if let Some(y) = Storable::year(p) {y == year } else {false})
+            .map(|(ident, _)| ident.as_str())
+            .collect::<Vec<&str>>();
+
+        content::Json(serde_json::to_string(&exported).unwrap())
     }
 
-    #[get("/full_projects", rank=1)]
-    fn all_json() -> content::Json<String> {
+    #[get("/full_projects")]
+    fn all_full() -> content::Json<String> {
         let loader = ::PROJECTS.lock().unwrap();
         let list = loader.projects_map.iter()
                          .map(|(ident, p)| {
@@ -193,8 +204,8 @@ mod projects {
         content::Json(serde_json::to_string(&list).unwrap())
     }
 
-    #[get("/projects", rank=1)]
-    fn names_json() -> content::Json<String> {
+    #[get("/projects")]
+    fn all_names() -> content::Json<String> {
         let loader = ::PROJECTS.lock().unwrap();
         let list = loader.projects_map.iter()
                          .map(|(ident, _)| ident)
@@ -203,7 +214,7 @@ mod projects {
         content::Json(serde_json::to_string(&list).unwrap())
     }
 
-    #[get("/projects/<name>", rank=1)]
+    #[get("/projects/<name>")]
     fn by_name(name: String) -> Option<content::Json<String>> {
         let loader = ::PROJECTS.lock().unwrap();
         let list = loader.projects_map.iter()
@@ -223,9 +234,11 @@ fn main() {
         .mount("/", routes![static_files])
         .mount("/cal/plain", routes![calendar::cal_plain, calendar::cal_plain_params])
         .mount("/cal", routes![calendar::cal, calendar::cal_params])
-        .mount("/api", routes![projects::by_year, projects::by_year_all,
-                               projects::names_json,
-                               projects::all_json,
+        .mount("/api", routes![projects::years,
+                               projects::by_year,
+                               projects::full_by_year,
+                               projects::all_names,
+                               projects::all_full,
                                projects::by_name])
         .launch();
 }
