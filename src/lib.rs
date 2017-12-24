@@ -35,6 +35,7 @@ extern crate tempdir;
 extern crate term;
 extern crate bill;
 extern crate open;
+extern crate toml;
 extern crate semver;
 extern crate term_size;
 extern crate icalendar;

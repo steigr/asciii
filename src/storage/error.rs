@@ -62,5 +62,8 @@ error_chain!{
         GitProcessFailed {
             description("Calling `git` failed")
         }
+        RepoUnintialized {
+            description("Git Repository was not initiliazed.")
+        }
     }
 }
