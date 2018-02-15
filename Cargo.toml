@@ -51,6 +51,8 @@ rocket = {version = "0.3", optional = true }
 rocket_codegen = {version = "0.3", optional = true }
 rocket_contrib = {version = "0.3", optional = true }
 rocket_cors = { version = "0.2", optional = true }
+openssl-sys = "0.9"
+openssl-probe = "0.1.2"
 
 bill = {version= "0.2", features=["serialization"]}
 icalendar = "0.3"

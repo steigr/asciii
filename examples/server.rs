@@ -13,6 +13,8 @@ extern crate rocket;
 extern crate rocket_contrib;
 extern crate rocket_cors;
 
+extern crate openssl_probe;
+
 use rocket::response::NamedFile;
 use itertools::Itertools;
 
@@ -233,6 +235,8 @@ mod projects {
 }
 
 fn main() {
+    openssl_probe::init_ssl_cert_env_vars();
+
     let (allowed_origins, failed_origins) = AllowedOrigins::some(&["http://localhost:8080"]);
     assert!(failed_origins.is_empty());
 
