@@ -11,6 +11,7 @@ extern crate itertools;
 
 extern crate rocket;
 extern crate rocket_contrib;
+extern crate rocket_cors;
 
 use rocket::response::NamedFile;
 use itertools::Itertools;
@@ -24,6 +25,8 @@ use std::sync::Mutex;
 use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
 
+use rocket::http::Method;
+use rocket_cors::{AllowedOrigins, AllowedHeaders};
 
 pub struct ProjectLoader {
     storage: Storage<Project>,
@@ -230,6 +233,17 @@ mod projects {
 }
 
 fn main() {
+    let (allowed_origins, failed_origins) = AllowedOrigins::some(&["http://localhost:8080"]);
+    assert!(failed_origins.is_empty());
+
+    let options = rocket_cors::Cors {
+        allowed_origins: allowed_origins,
+        allowed_methods: vec![Method::Get].into_iter().map(From::from).collect(),
+        allowed_headers: AllowedHeaders::some(&["Authorization", "Accept"]),
+        allow_credentials: true,
+        ..Default::default()
+    };
+
     rocket::ignite()
         .mount("/", routes![static_files])
         .mount("/cal/plain", routes![calendar::cal_plain, calendar::cal_plain_params])
@@ -240,5 +254,6 @@ fn main() {
                                projects::all_names,
                                projects::all_full,
                                projects::by_name])
+        .attach(options)
         .launch();
 }

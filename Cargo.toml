@@ -50,6 +50,7 @@ rustyline = {version = "1.0.0", optional = true }
 rocket = {version = "0.3", optional = true }
 rocket_codegen = {version = "0.3", optional = true }
 rocket_contrib = {version = "0.3", optional = true }
+rocket_cors = { version = "0.2", optional = true }
 
 bill = {version= "0.2", features=["serialization"]}
 icalendar = "0.3"
@@ -84,7 +85,7 @@ default = ["document_export", "git_statuses", "serialization", "deserialization"
 document_export = ["handlebars", "serialization"]
 serde_base = ["serde", "serde_derive"]
 serialization = ["serde_base", "serde_json"]
-server = ["rocket", "rocket_codegen", "rocket_contrib" ]
+server = ["rocket", "rocket_codegen", "rocket_contrib", "rocket_cors" ]
 deserialization = ["serde_base","serde_yaml", "ordered-float", "num-traits"]
 git_statuses = ["git2"]
 shell = ["rustyline"]
